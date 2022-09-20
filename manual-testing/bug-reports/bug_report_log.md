@@ -1,18 +1,12 @@
 # Bug Report Log
-Project: SauceDemo QA | Tester: dhimanrgv
+Project: SauceDemo QA | Tester: dhimanrgv | Updated: 2022-09-20
 
-## BUG-001: Problem user images fail to load
-Severity: Medium | Priority: P2 | Status: Open | Found: 2021-07-07
-
-## BUG-002: Cart badge not cleared after order completion
-Severity: High | Priority: P1 | Status: Fixed v2.1 | Found: 2021-08-10
-Root Cause: Cart state not cleared from localStorage on ORDER_COMPLETE.
-
-## BUG-003: Sort dropdown resets on page refresh
-Severity: Low | Priority: P3 | Status: Won't Fix | Found: 2022-01-11
-Sort is intentionally session-only per product spec.
-
-## BUG-004: Checkout zip code accepts special characters
-Severity: Medium | Priority: P2 | Status: Open | Found: 2022-03-22
-Steps: Checkout with Zip=!@#$% -- no validation error, proceeds to step 2.
-Risk: Could cause downstream payment/shipping API failures.
+## BUG-001 | problem_user images broken | Medium | P2 | Open
+## BUG-002 | cart badge after order | High | P1 | Fixed v2.1
+## BUG-003 | sort reset on refresh | Low | P3 | Won't Fix
+## BUG-004 | zip accepts special chars | Medium | P2 | Open
+## BUG-005: Performance glitch user -- delayed page load exceeds 5s
+Severity: Medium | Priority: P2 | Status: Known/By Design | Found: 2022-09-05
+Summary: performance_glitch_user triggers ~5s delay with no loading indicator.
+Expected: Loading indicator shown, or delay under 3s.
+Actual: Blank white screen for ~5 seconds -- may appear as crash to end users.
