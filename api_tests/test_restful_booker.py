@@ -1,5 +1,5 @@
 """
-api_tests/test_restful_booker.py  v1.0
+api_tests/test_restful_booker.py  v1.1
 REST API test suite. Target: https://restful-booker.herokuapp.com
 Covers: Auth, GET (list + single + filter), POST, PUT, PATCH, DELETE.
 """
@@ -43,7 +43,7 @@ class TestAuth:
         assert r.status_code == 200 and "token" in r.json()
 
     @pytest.mark.api
-    def test_invalid_credentials_return_bad_credentials(self):
+    def test_invalid_credentials(self):
         r = requests.post(f"{BASE}/auth", json={"username": "admin", "password": "wrong"})
         assert r.json().get("reason") == "Bad credentials"
 
@@ -60,11 +60,6 @@ class TestGetBookings:
         assert requests.get(f"{BASE}/booking").status_code == 200
 
     @pytest.mark.api
-    def test_all_items_have_bookingid(self):
-        for item in requests.get(f"{BASE}/booking").json():
-            assert "bookingid" in item
-
-    @pytest.mark.api
     def test_get_single_booking(self, created_id, payload):
         r = requests.get(f"{BASE}/booking/{created_id}")
         assert r.status_code == 200
@@ -73,6 +68,12 @@ class TestGetBookings:
     @pytest.mark.api
     def test_get_nonexistent_returns_404(self):
         assert requests.get(f"{BASE}/booking/999999999").status_code == 404
+
+    @pytest.mark.api
+    def test_filter_by_firstname(self, created_id, payload):
+        r = requests.get(f"{BASE}/booking", params={"firstname": payload["firstname"]})
+        ids = [b["bookingid"] for b in r.json()]
+        assert created_id in ids
 
 
 class TestCreateBooking:
@@ -84,3 +85,42 @@ class TestCreateBooking:
     def test_create_has_bookingid(self, payload):
         r = requests.post(f"{BASE}/booking", json=payload, headers=HEADERS)
         assert isinstance(r.json()["bookingid"], int)
+
+
+class TestUpdateBooking:
+    @pytest.mark.api
+    def test_full_update_with_token(self, created_id, payload, token):
+        updated = {**payload, "firstname": "Updated", "totalprice": 999}
+        r = requests.put(f"{BASE}/booking/{created_id}", json=updated,
+                         headers={**HEADERS, "Cookie": f"token={token}"})
+        assert r.status_code == 200 and r.json()["firstname"] == "Updated"
+
+    @pytest.mark.api
+    def test_update_without_token_returns_403(self, created_id, payload):
+        r = requests.put(f"{BASE}/booking/{created_id}", json=payload, headers=HEADERS)
+        assert r.status_code == 403
+
+    @pytest.mark.api
+    def test_partial_update_patch(self, created_id, token):
+        r = requests.patch(f"{BASE}/booking/{created_id}",
+                           json={"firstname": "Patched"},
+                           headers={**HEADERS, "Cookie": f"token={token}"})
+        assert r.status_code == 200 and r.json()["firstname"] == "Patched"
+
+
+class TestDeleteBooking:
+    @pytest.mark.api
+    def test_delete_with_token(self, payload, token):
+        bid = requests.post(f"{BASE}/booking", json=payload,
+                            headers=HEADERS).json()["bookingid"]
+        r = requests.delete(f"{BASE}/booking/{bid}",
+                            headers={**HEADERS, "Cookie": f"token={token}"})
+        assert r.status_code == 201
+
+    @pytest.mark.api
+    def test_deleted_booking_returns_404(self, payload, token):
+        bid = requests.post(f"{BASE}/booking", json=payload,
+                            headers=HEADERS).json()["bookingid"]
+        requests.delete(f"{BASE}/booking/{bid}",
+                        headers={**HEADERS, "Cookie": f"token={token}"})
+        assert requests.get(f"{BASE}/booking/{bid}").status_code == 404
