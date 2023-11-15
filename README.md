@@ -1,7 +1,7 @@
 # QA Automation Portfolio
 
-Professional QA automation portfolio.
-Built by dhimanrgv
+Professional QA automation portfolio by dhimanrgv.
+Built: 2021 - present
 
 ## Setup
 ```bash
