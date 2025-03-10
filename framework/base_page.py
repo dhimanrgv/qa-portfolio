@@ -1,7 +1,6 @@
 """
-framework/base_page.py  v1.1 -- refactored with full docstrings and type hints
-Base class inherited by every Page Object.
-Centralises WebDriverWait and all common Selenium interactions.
+framework/base_page.py  v2.0 -- 2025 refresh after Canada studies
+Added js_click, scroll_to_element, wait_for_element_to_disappear.
 """
 import os
 from selenium.webdriver.support.ui  import WebDriverWait
@@ -26,98 +25,68 @@ class BasePage:
                                      ignored_exceptions=[StaleElementReferenceException])
         self.actions = ActionChains(driver)
 
-    # -- Navigation --------------------------------------------------
-    def open(self, path: str = "") -> None:
-        """Navigate to BASE_URL + path."""
-        self.driver.get(f"{self.BASE_URL}{path}")
+    def open(self, path=""):           self.driver.get(f"{self.BASE_URL}{path}")
+    def get_current_url(self):         return self.driver.current_url
+    def get_title(self):               return self.driver.title
 
-    def get_current_url(self) -> str: return self.driver.current_url
-    def get_title(self) -> str:       return self.driver.title
-    def refresh(self) -> None:        self.driver.refresh()
-
-    # -- Element finders (explicit waits) ----------------------------
-    def find(self, locator: tuple):
-        """Wait for element to be present in DOM."""
+    def find(self, locator):
         return self.wait.until(EC.presence_of_element_located(locator))
-
-    def find_clickable(self, locator: tuple):
-        """Wait for element to be visible AND clickable."""
+    def find_clickable(self, locator):
         return self.wait.until(EC.element_to_be_clickable(locator))
-
-    def find_all(self, locator: tuple) -> list:
-        """Return all matching elements."""
+    def find_all(self, locator):
         self.wait.until(EC.presence_of_all_elements_located(locator))
         return self.driver.find_elements(*locator)
 
-    # -- Interactions ------------------------------------------------
-    def click(self, locator: tuple) -> None:
-        self.find_clickable(locator).click()
-
-    def type_text(self, locator: tuple, text: str, clear_first: bool = True) -> None:
+    def click(self, locator):          self.find_clickable(locator).click()
+    def type_text(self, locator, text, clear_first=True):
         el = self.find(locator)
         if clear_first: el.clear()
         el.send_keys(text)
+    def get_text(self, locator):       return self.find(locator).text
+    def get_attribute(self, locator, attr): return self.find(locator).get_attribute(attr)
 
-    def get_text(self, locator: tuple) -> str:      return self.find(locator).text
-    def get_attribute(self, locator, attr) -> str:  return self.find(locator).get_attribute(attr)
-
-    def js_click(self, locator: tuple) -> None:
-        """JavaScript click -- useful when element is obscured by overlay."""
+    def js_click(self, locator):
+        """JavaScript click -- for elements blocked by overlays."""
         self.driver.execute_script("arguments[0].click();", self.find(locator))
 
-    def scroll_to_element(self, locator: tuple) -> None:
-        """Scroll element into view using JavaScript."""
-        self.driver.execute_script("arguments[0].scrollIntoView(true);", self.find(locator))
+    def scroll_to_element(self, locator):
+        """Scroll element into viewport using JavaScript."""
+        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});",
+                                   self.find(locator))
 
-    # -- State checks ------------------------------------------------
-    def is_visible(self, locator: tuple, timeout: int = 5) -> bool:
+    def is_visible(self, locator, timeout=5):
         try:
             WebDriverWait(self.driver, timeout).until(EC.visibility_of_element_located(locator))
             return True
         except TimeoutException:
             return False
 
-    # -- Wait helpers ------------------------------------------------
-    def wait_for_url_to_contain(self, text: str, timeout: int = 10) -> None:
+    def wait_for_url_to_contain(self, text, timeout=10):
         WebDriverWait(self.driver, timeout).until(EC.url_contains(text))
 
-    def wait_for_text_in_element(self, locator: tuple, text: str) -> None:
-        self.wait.until(EC.text_to_be_present_in_element(locator, text))
+    def wait_for_element_to_disappear(self, locator, timeout=10):
+        WebDriverWait(self.driver, timeout).until(EC.invisibility_of_element_located(locator))
 
-    # -- Alerts ------------------------------------------------------
-    def accept_alert(self) -> str:
-        alert = WebDriverWait(self.driver, self.DEFAULT_TIMEOUT).until(EC.alert_is_present())
-        text = alert.text; alert.accept(); return text
+    def accept_alert(self):
+        a = WebDriverWait(self.driver, self.DEFAULT_TIMEOUT).until(EC.alert_is_present())
+        t = a.text; a.accept(); return t
+    def dismiss_alert(self):
+        a = WebDriverWait(self.driver, self.DEFAULT_TIMEOUT).until(EC.alert_is_present())
+        t = a.text; a.dismiss(); return t
+    def type_in_alert(self, text):
+        a = WebDriverWait(self.driver, self.DEFAULT_TIMEOUT).until(EC.alert_is_present())
+        a.send_keys(text); a.accept()
 
-    def dismiss_alert(self) -> str:
-        alert = WebDriverWait(self.driver, self.DEFAULT_TIMEOUT).until(EC.alert_is_present())
-        text = alert.text; alert.dismiss(); return text
+    def switch_to_frame(self, locator):        self.driver.switch_to.frame(self.find(locator))
+    def switch_to_frame_by_index(self, idx):   self.driver.switch_to.frame(idx)
+    def switch_to_default_content(self):       self.driver.switch_to.default_content()
 
-    def type_in_alert(self, text: str) -> None:
-        alert = WebDriverWait(self.driver, self.DEFAULT_TIMEOUT).until(EC.alert_is_present())
-        alert.send_keys(text); alert.accept()
-
-    # -- Frames & iFrames --------------------------------------------
-    def switch_to_frame(self, locator: tuple) -> None:
-        self.driver.switch_to.frame(self.find(locator))
-
-    def switch_to_frame_by_index(self, index: int) -> None:
-        self.driver.switch_to.frame(index)
-
-    def switch_to_default_content(self) -> None:
-        self.driver.switch_to.default_content()
-
-    # -- Windows & Tabs ----------------------------------------------
-    def get_window_handles(self) -> list:       return self.driver.window_handles
-    def switch_to_new_window(self) -> None:
-        self.driver.switch_to.window(self.driver.window_handles[-1])
-
-    def close_current_window_and_switch_back(self) -> None:
+    def get_window_handles(self):              return self.driver.window_handles
+    def switch_to_new_window(self):            self.driver.switch_to.window(self.driver.window_handles[-1])
+    def close_current_window_and_switch_back(self):
         self.driver.close()
         self.driver.switch_to.window(self.driver.window_handles[0])
 
-    # -- Screenshots -------------------------------------------------
-    def take_screenshot(self, filename: str = "screenshot.png") -> str:
+    def take_screenshot(self, filename="screenshot.png"):
         path = os.path.join("reports", filename)
-        self.driver.save_screenshot(path)
-        return path
+        self.driver.save_screenshot(path); return path
