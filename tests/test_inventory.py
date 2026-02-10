@@ -1,4 +1,4 @@
-"""tests/test_inventory.py -- Inventory page test suite."""
+"""tests/test_inventory.py v2 -- added negative and regression markers."""
 import pytest
 from pages.login_page     import LoginPage
 from pages.inventory_page import InventoryPage
@@ -12,36 +12,38 @@ class TestInventory:
         lg = LoginPage(browser); lg.navigate(); lg.login(**Users.STANDARD)
         lg.wait_for_url_to_contain("inventory")
 
+    @pytest.mark.smoke
     def test_six_products_displayed(self):
         assert self.inv.get_product_count() == Products.TOTAL_COUNT
 
+    @pytest.mark.regression
     def test_all_prices_positive(self):
         assert all(p > 0 for p in self.inv.get_all_prices())
 
+    @pytest.mark.regression
     def test_sort_a_to_z(self):
-        self.inv.sort_products("az")
-        n = self.inv.get_all_product_names()
+        self.inv.sort_products("az"); n = self.inv.get_all_product_names()
         assert n == sorted(n)
 
+    @pytest.mark.regression
     def test_sort_z_to_a(self):
-        self.inv.sort_products("za")
-        n = self.inv.get_all_product_names()
+        self.inv.sort_products("za"); n = self.inv.get_all_product_names()
         assert n == sorted(n, reverse=True)
 
+    @pytest.mark.regression
     def test_sort_price_low_to_high(self):
-        self.inv.sort_products("lohi")
-        p = self.inv.get_all_prices()
+        self.inv.sort_products("lohi"); p = self.inv.get_all_prices()
         assert p == sorted(p)
 
+    @pytest.mark.regression
     def test_sort_price_high_to_low(self):
-        self.inv.sort_products("hilo")
-        p = self.inv.get_all_prices()
+        self.inv.sort_products("hilo"); p = self.inv.get_all_prices()
         assert p == sorted(p, reverse=True)
 
+    @pytest.mark.smoke
     def test_add_one_item_updates_badge(self):
-        self.inv.add_item_to_cart(0)
-        assert self.inv.get_cart_count() == 1
+        self.inv.add_item_to_cart(0); assert self.inv.get_cart_count() == 1
 
+    @pytest.mark.regression
     def test_add_all_items_updates_badge(self):
-        self.inv.add_all_items_to_cart()
-        assert self.inv.get_cart_count() == 6
+        self.inv.add_all_items_to_cart(); assert self.inv.get_cart_count() == 6
